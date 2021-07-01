@@ -12,7 +12,9 @@ class ESynapse:
         self.ssvr = 0
         self.ssvd = 0
         self.mito = []
-        self.MSB = []
+        self.MSB_names = []
+        self.MSB_cfa = []
+        self.MSB_ssvd = []
         self.gContact = "none"
 
     # return name as string
@@ -24,8 +26,10 @@ class ESynapse:
         self.mito.append(mito)
 
     # add MSB flat area to existing list
-    def addMSB(self, MSB):
-        self.MSB.append(MSB)
+    def addMSB(self, name, cfa, ssvd):
+        self.MSB_names.append(name)
+        self.MSB_cfa.append(cfa)
+        self.MSB_ssvd.append(ssvd)
 
     # add glia contact to existing string
     def addGContact(self, contact):
@@ -74,7 +78,7 @@ class Dendrite:
     # if any synapses are completely blank, remove them
     def removeBlanks(self):
         for synapse in self.synapses:
-            if synapse.ssvr == 0 and synapse.ssvd == 0 and len(synapse.mito) == 0 and len(synapse.MSB) == 0 and synapse.gContact == "none":
+            if synapse.ssvr == 0 and synapse.ssvd == 0 and len(synapse.mito) == 0 and len(synapse.MSB_names) == 0 and synapse.gContact == "none":
                 self.synapses.remove(synapse)
 
     # write the dendrite data to a file
@@ -97,46 +101,61 @@ class Dendrite:
         if writeTitles:
             file.write("name," +
                        "cfa," +
-                       "ssvr," +
                        "ssvd," +
+                       "ssvr," +
                        "mito," +
                        "mito1," +
                        "mito2," +
                        "mito3," +
-                       "total_mito," +
+                       "total_mito_volume," +
                        "MSB," +
-                       "MSB1," +
-                       "MSB2," +
-                       "MSB3," +
-                       "total_MSB,"
-                       "gContact\n")
+                       "MSB1_name," +
+                       "MSB1_cfa," +
+                       "MSB1_ssvd," +
+                       "MSB2_name," +
+                       "MSB2_cfa," +
+                       "MSB2_ssvd," +
+                       "MSB3_name," +
+                       "MSB3_cfa," +
+                       "MSB3_ssvd," +
+                       "total_bouton_synapse_area,"
+                       "glia_contact\n")
 
         # add all of the synapse data line by line
         for synapse in self.synapses:
             file.write(str(synapse) + "," +
                        str(synapse.cfa) + "," +
-                       str(synapse.ssvr) + "," +
-                       str(synapse.ssvd) + ",")
-            
-            if len(synapse.mito) == 0:
-                file.write("n,0,0,0,")
-            elif len(synapse.mito) == 1:
-                file.write("y," + str(synapse.mito[0]) + ",0,0,")
-            elif len(synapse.mito) == 2:
-                file.write("y," + str(synapse.mito[0]) + "," + str(synapse.mito[1]) + ",0,")
-            else:
-                file.write("y," + str(synapse.mito[0]) + "," + str(synapse.mito[1]) + "," + str(synapse.mito[2]) + ",")
-            file.write(str(sum(synapse.mito)) + ",")
+                       str(synapse.ssvd) + "," +
+                       str(synapse.ssvr) + ",")
 
-            if len(synapse.MSB) == 0:
-                file.write("n,0,0,0,")
-            elif len(synapse.MSB) == 1:
-                file.write("y," + str(synapse.MSB[0]) + ",0,0,")
-            elif len(synapse.MSB) == 2:
-                file.write("y," + str(synapse.MSB[0]) + "," + str(synapse.MSB[1]) + ",0,")
+            mito_sum = sum(synapse.mito)
+            if len(synapse.mito) == 0:
+                mito_presence = "n,"
             else:
-                file.write("y," + str(synapse.MSB[0]) + "," + str(synapse.MSB[1]) + "," + str(synapse.MSB[2]) + ",")
-            file.write(str(sum(synapse.MSB)) + ",")
+                mito_presence = "y,"
+            if len(synapse.mito) < 3:
+                blanks = 3 - len(synapse.mito)
+                for i in range(blanks):
+                    synapse.mito.append("")
+            file.write(mito_presence + str(synapse.mito[0]) + "," + str(synapse.mito[1]) + "," + str(synapse.mito[2]) + ",")
+            file.write(str(mito_sum) + ",")
+
+            bouton_sum = sum(synapse.MSB_cfa) + synapse.cfa
+            if len(synapse.MSB_names) == 0:
+                MSB_presence = "n,"
+            else:
+                MSB_presence = "y,"
+            if len(synapse.MSB_names) < 3:
+                blanks = 3 - len(synapse.MSB_names)
+                for i in range(blanks):
+                    synapse.MSB_names.append("")
+                    synapse.MSB_cfa.append("")
+                    synapse.MSB_ssvd.append("")
+            file.write(MSB_presence +
+                       synapse.MSB_names[0] + "," + str(synapse.MSB_cfa[0]) + "," + str(synapse.MSB_ssvd[0]) + "," +
+                       synapse.MSB_names[1] + "," + str(synapse.MSB_cfa[1]) + "," + str(synapse.MSB_ssvd[1]) + "," +
+                       synapse.MSB_names[2] + "," + str(synapse.MSB_cfa[2]) + "," + str(synapse.MSB_ssvd[2]) + ",")
+            file.write(str(bouton_sum) + ",")
 
             file.write(synapse.gContact + "\n")
 
@@ -144,16 +163,16 @@ class Dendrite:
 
 # BEGINNING OF MAIN
 
-file = input("What is the name or file path of the CSV file?: ")
-allData = open(file, "r")
-lines = allData.readlines()
-allData.close()
-cont = "y"
+# catch any exceptions so they can printed for the user
+try:
 
-while cont == "y":
-    
-    # catch any exceptions so they can printed for the user
-    try:
+    file = input("What is the name or file path of the CSV file?: ")
+    allData = open(file, "r")
+    lines = allData.readlines()
+    allData.close()
+    cont = "y"
+
+    while cont == "y":
         print("What dendrite do you wish to pull excitatory synapse information from?")
         dendriteName = input("(Eg. d07, d013, etc.): ")
 
@@ -236,10 +255,16 @@ while cont == "y":
                         while response != "y" and response != "n":
                             response = input("Please enter a valid answer. (y/n):")
                         if response == "y":
-                            i = counter
-                            while not re.search("d" + str(dNum) + "cfa" + cNum + "(axe" + str(synapse.axeNum) + ")?$", lines[i].split(",")[0].lower()):
-                                i += 1
-                            synapse.addMSB(float(lines[i].split(",")[2]))
+                            
+                            # iterate through file to find cfa and ssvd for MSB
+                            MSB_cfa = 0
+                            MSB_ssvd = 0
+                            for l in lines:
+                                if re.search("d" + dNum + "cfa" + cNum + "(axe" + synapse.axeNum + ")?$", l.split(",")[0].lower()):
+                                    MSB_cfa = float(l.split(",")[2])
+                                elif re.search("d" + dNum + "c" + cNum + "(axe" + synapse.axeNum + ")?_ssvd$", l.split(",")[0].lower()):
+                                    MSB_ssvd = int(l.split(",")[1])
+                            synapse.addMSB(name, MSB_cfa, MSB_ssvd)
 
         # remove blank synapses (possible if c-trace was renamed but no data were added
         dendrite.removeBlanks()
@@ -250,14 +275,7 @@ while cont == "y":
 
         cont = input("\nWould you like to get more dendrite data from this file? (y/n): ")
 
-    except Exception as e:
-        print("ERROR: " + str(e))
-        cont = "n"
+except Exception as e:
+    print("ERROR: " + str(e))
 
 input("Press enter to exit.")
-
-
-
-
-
-            
