@@ -62,6 +62,7 @@ class Dendrite:
         for synapse in self.synapses:
             if synapse.cNum == cNum.lower():
                 return synapse
+        print("ERROR: The following c-trace cannot be found: " + cNum)
         return None
 
     # search for a synapse by axeNum
